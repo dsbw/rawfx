@@ -1,6 +1,5 @@
 (ns ezclj.core
-  (:require [cljfx.api :as fx]
-            [ezclj.ui :refer :all])
+  (:require [cljfx.api :as fx])
   (:gen-class :extends javafx.application.Application)
   (:import (javafx.application Application Platform)
            (javafx.fxml FXMLLoader)
