@@ -1,30 +1,38 @@
 (ns ezclj.core
-  (:require [cljfx.api :as fx])
   (:gen-class :extends javafx.application.Application)
-  (:import (javafx.application Application Platform)
-           (javafx.fxml FXMLLoader)
-           (javafx.scene Scene Group)))
+  (:import (javafx.application Platform)
+           (javafx.stage Stage)))
 
-(def _thread (atom nil))
-(def _app (atom nil))
-(def _scene (atom nil))
-(def _stage (atom nil))
+;Lifted from https://github.com/cljfx
+(defmacro run-later [& body]
+  `(let [*result# (promise)]
+     (Platform/runLater
+       (fn []
+         (let [result# (try
+                         [nil (do ~@body)]
+                         (catch Exception e#
+                           [e# nil]))
+               [err# ~'_] result#]
+           (deliver *result# result#)
+           (when err#
+             (.printStackTrace ^Throwable err#)))))
+     (delay
+       (let [[err# val#] @*result#]
+         (if err#
+           (throw err#)
+           val#)))))
 
-(defn -start [app stage]
-  (reset! _app app)
-  (.setTitle stage "Hello From Clojure!")
-  (let [f (Scene. (FXMLLoader/load (.getResource (.getClass app) "sample.fxml")) 800 600)
-        ss (.getStylesheets f)
-        _ (.add ss (-> (.getClass app) (.getResource "default.css") (.toExternalForm)))
-        _ (.setScene stage f)]
-    (reset! _scene f))
-  (.show stage)
-  (reset! _stage stage))
+(defmacro on-fx-thread [& body]
+  `(if (Platform/isFxApplicationThread)
+     (deliver (promise) (do ~@body))
+     (run-later ~@body)))
 
+(defn initialize []
+  (Platform/startup #(Platform/setImplicitExit false)))
 
-(defn -main [& args]
-  (reset! _thread
-          (Thread. #(Application/launch ezclj.core (into-array String [])))))
+(initialize)
 
-(defn u [fn]
-  (Platform/runLater fn))
+(def s (on-fx-thread (Stage.)))
+(.setTitle @s "Hello, what!!!?")
+(on-fx-thread (.show @s))
+
